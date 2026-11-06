@@ -1,238 +1,528 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>MQTT WebSocket Dashboard</title>
+<title>MQTT Dashboard</title>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/paho-mqtt/1.0.1/mqttws31.min.js"></script>
 
 <style>
-:root{
-  --primary:#2563eb;
-  --success:#16a34a;
-  --danger:#dc2626;
-  --bg:#f1f5f9;
+:root {
+    --bg: #dceff4;
+    --panel: #e5f3f6;
+    --header: #c8e0e7;
+    --border: #b8d2da;
+    --text: #344b55;
+    --primary: #9fcbd7;
+    --success: #65a88a;
+    --danger: #cf7777;
 }
 
-body{
-  font-family: system-ui, sans-serif;
-  background: var(--bg);
-  margin:0;
-  padding:30px 15px;
-  display:flex;
-  justify-content:center;
+* {
+    box-sizing: border-box;
 }
 
-/* ===== CONTAINER PANEL ===== */
-.container{
-  width:100%;
-  max-width:800px;
+body {
+    margin: 0;
+    padding: 25px;
+    font-family: Arial, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
 }
 
-/* ============================ */
-
-h2{ margin-top:0; text-align:center; }
-
-.card{
-  background:#fff;
-  border-radius:10px;
-  box-shadow:0 4px 10px rgba(0,0,0,.05);
-  margin-bottom:15px;
-  overflow:hidden;
+.container {
+    max-width: 850px;
+    margin: auto;
+    position: relative;
 }
 
-.card-header{
-  background:var(--primary);
-  color:#fff;
-  padding:12px;
-  cursor:pointer;
-  font-weight:600;
+.topbar {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    margin-bottom: 15px;
 }
 
-.card-content{
-  padding:15px;
-  display:none;
+.settings-btn {
+    background: transparent;
+    border: none;
+    color: #526b75;
+    font-size: 23px;
+    cursor: pointer;
+    width: auto;
+    padding: 5px 10px;
 }
 
-.card-content.active{
-  display:block;
+.status {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 20px;
+    padding: 10px 15px;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 8px;
 }
 
-input, select, button{
-  width:100%;
-  padding:8px;
-  margin-bottom:10px;
-  border-radius:6px;
-  border:1px solid #ccc;
-  box-sizing:border-box;
+.status-dot {
+    width: 13px;
+    height: 13px;
+    background: var(--danger);
+    border-radius: 50%;
 }
 
-button{
-  background:var(--primary);
-  color:white;
-  border:none;
-  cursor:pointer;
-  font-weight:600;
+.status-text {
+    font-size: 14px;
+    font-weight: 600;
 }
 
-button:hover{ opacity:.9; }
-
-#status{
-  padding:12px;
-  border-radius:8px;
-  font-weight:600;
-  margin-bottom:15px;
-  background:var(--danger);
-  color:#fff;
-  text-align:center;
+.card {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    margin-bottom: 12px;
+    overflow: hidden;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.04);
 }
 
-#messages{
-  background:#111;
-  color:#0f0;
-  padding:10px;
-  height:180px;
-  overflow-y:auto;
-  font-family:monospace;
-  border-radius:8px;
-  font-size:14px;
+.card-header {
+    background: var(--header);
+    padding: 13px;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 16px;
+}
+
+.card-content {
+    padding: 15px;
+    display: none;
+}
+
+.card-content.active {
+    display: block;
+}
+
+input, select {
+    width: 100%;
+    padding: 11px;
+    margin-bottom: 12px;
+    border: 1px solid #a9c5ce;
+    border-radius: 5px;
+    background: #f0f8fa;
+    color: var(--text);
+    font-size: 14px;
+}
+
+button {
+    width: 100%;
+    padding: 11px;
+    border: 1px solid #a9c5ce;
+    border-radius: 6px;
+    background: var(--primary);
+    color: #344b55;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+button:hover {
+    filter: brightness(0.96);
+}
+
+.main-content {
+    padding: 10px 5px;
+}
+
+.message-box {
+    height: 180px;
+    overflow-y: auto;
+    padding: 12px;
+    background: #eaf5f7;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    font-family: monospace;
+    font-size: 13px;
+    white-space: pre-wrap;
+    color: #355b45;
+}
+
+/* BROKER CONFIG PANEL */
+
+.config-panel {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 350px;
+    max-width: calc(100% - 30px);
+    background: #e4f1f4;
+    border: 1px solid #b5d0d8;
+    border-radius: 12px;
+    padding: 12px;
+    box-shadow: 0 5px 18px rgba(0,0,0,0.12);
+    z-index: 10;
+}
+
+.config-title {
+    background: #c8e0e7;
+    padding: 12px;
+    margin: -12px -12px 15px;
+    border-radius: 11px 11px 0 0;
+    font-size: 17px;
+    font-weight: bold;
+}
+
+.config-panel label {
+    display: block;
+    font-size: 14px;
+    margin-bottom: 5px;
+}
+
+.config-panel input,
+.config-panel select {
+    margin-bottom: 12px;
+}
+
+.config-panel button {
+    background: #c4e0e8;
+}
+
+.close-config {
+    display: none;
+}
+
+@media (max-width: 500px) {
+    body {
+        padding: 15px;
+    }
+
+    .config-panel {
+        width: 340px;
+    }
 }
 </style>
 </head>
+
 <body>
 
 <div class="container">
 
-<h2>MQTT WebSocket Dashboard</h2>
+    <div class="topbar">
+        <button class="settings-btn" id="settingsBtn" title="Broker Settings">
+            ⚙
+        </button>
+    </div>
 
-<div id="status">Not Connected</div>
+    <div class="status">
+        <span class="status-dot" id="statusDot"></span>
+        <span class="status-text" id="statusText">
+            Not Connected
+        </span>
+    </div>
 
-<div class="card">
-  <div class="card-header">MQTT Config</div>
-  <div class="card-content active">
+    <div class="main-content">
+
+        <!-- SUBSCRIBE -->
+        <div class="card">
+            <div class="card-header" onclick="toggleCard(this)">
+                Subscribe
+            </div>
+            <div class="card-content active">
+                <input
+                    type="text"
+                    id="subtopic"
+                    placeholder="Topic Subscribe"
+                >
+
+                <button id="subscribeBtn">
+                    Subscribe
+                </button>
+            </div>
+        </div>
+
+        <!-- PUBLISH -->
+        <div class="card">
+            <div class="card-header" onclick="toggleCard(this)">
+                Publish
+            </div>
+            <div class="card-content">
+                <input
+                    type="text"
+                    id="pubtopic"
+                    placeholder="Topic Publish"
+                >
+
+                <input
+                    type="text"
+                    id="message"
+                    placeholder="Message"
+                >
+
+                <button id="publishBtn">
+                    Publish
+                </button>
+            </div>
+        </div>
+
+        <!-- MESSAGES -->
+        <div class="card">
+            <div class="card-header" onclick="toggleCard(this)">
+                Messages
+            </div>
+            <div class="card-content">
+                <div class="message-box" id="messages">
+                    Waiting data...
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+</div>
+
+<!-- BROKER CONFIG -->
+<div class="config-panel" id="configPanel">
+
+    <div class="config-title">
+        Broker Config
+    </div>
+
+    <label for="protocol">Protocol:</label>
     <select id="protocol">
-      <option value="wss">wss</option>
-      <option value="ws">ws</option>
+        <option value="wss">wss</option>
+        <option value="ws">ws</option>
     </select>
-    <input id="broker" value="broker.emqx.io">
-    <input id="port" value="8084">
-    <input id="path" value="/mqtt">
-    <button id="connectBtn">Connect</button>
-  </div>
-</div>
 
-<div class="card">
-  <div class="card-header">Subscribe</div>
-  <div class="card-content">
-    <input id="subtopic" placeholder="example/topic">
-    <button id="subscribeBtn">Subscribe</button>
-  </div>
-</div>
+    <label for="broker">Broker:</label>
+    <input
+        type="text"
+        id="broker"
+        value="broker.emqx.io"
+    >
 
-<div class="card">
-  <div class="card-header">Publish</div>
-  <div class="card-content">
-    <input id="pubtopic" placeholder="example/topic">
-    <input id="message" placeholder="hello mqtt">
-    <button id="publishBtn">Send</button>
-  </div>
-</div>
+    <label for="port">Port:</label>
+    <input
+        type="number"
+        id="port"
+        value="8084"
+    >
 
-<div class="card">
-  <div class="card-header">Messages</div>
-  <div class="card-content active">
-    <div id="messages">Waiting data...</div>
-  </div>
-</div>
+    <label for="path">Path:</label>
+    <input
+        type="text"
+        id="path"
+        value="/mqtt"
+    >
 
-</div> <!-- END CONTAINER -->
+    <button id="connectBtn">
+        Connect
+    </button>
+
+</div>
 
 <script>
-const $ = id => document.getElementById(id);
+
+// MQTT VARIABLES
 let client = null;
 let connected = false;
 
-document.querySelectorAll(".card-header").forEach(header=>{
-  header.addEventListener("click",()=>{
+// ELEMENT
+const $ = id => document.getElementById(id);
+
+// OPEN AND CLOSE CARD
+function toggleCard(header) {
     header.nextElementSibling.classList.toggle("active");
-  });
+}
+
+// OPEN BROKER CONFIG
+$("settingsBtn").addEventListener("click", () => {
+    $("configPanel").style.display = "block";
 });
 
-const log = text=>{
-  const msgBox = $("messages");
-  const time = new Date().toLocaleTimeString();
-  msgBox.innerHTML += `[${time}] ${text}\n`;
-  msgBox.scrollTop = msgBox.scrollHeight;
-};
+// MQTT STATUS
+function setStatus(text, type) {
 
-const setStatus = (text, type)=>{
-  const status = $("status");
-  status.textContent = text;
-  status.style.background =
-    type==="success" ? "var(--success)" :
-    type==="danger" ? "var(--danger)" :
-    "var(--primary)";
-};
+    $("statusText").textContent = text;
 
-$("connectBtn").addEventListener("click",()=>{
+    const colors = {
+        success: "var(--success)",
+        danger: "var(--danger)",
+        normal: "#a5bdc5"
+    };
 
-  const protocol = $("protocol").value;
-  const broker = $("broker").value;
-  const port = parseInt($("port").value);
-  const path = $("path").value;
+    $("statusDot").style.background = colors[type] || colors.normal;
+}
 
-  const clientID = "web_" + Math.random().toString(16).substr(2,8);
+// MESSAGE LOG
+function log(text) {
 
-  /* ===== SAFE FORMAT FOR PAHO ===== */
-  client = new Paho.MQTT.Client(
-    broker,
-    port,
-    path,
-    clientID
-  );
+    const box = $("messages");
 
-  client.onConnectionLost = ()=>{
-    connected=false;
-    setStatus("Connection Lost","danger");
-    log("Connection lost");
-  };
-
-  client.onMessageArrived = message=>{
-    log(`Topic: ${message.destinationName} | ${message.payloadString}`);
-  };
-
-  client.connect({
-    useSSL: protocol==="wss",
-    timeout:5,
-    onSuccess: ()=>{
-      connected=true;
-      setStatus(`Connected to ${broker}`,"success");
-      log("Connected");
-    },
-    onFailure: err=>{
-      setStatus("Connection Failed","danger");
-      log("Failed: "+err.errorMessage);
+    if (box.textContent === "Waiting data...") {
+        box.textContent = "";
     }
-  });
+
+    const time = new Date().toLocaleTimeString();
+
+    box.textContent += `[${time}] ${text}\n`;
+
+    box.scrollTop = box.scrollHeight;
+}
+
+// CONNECT MQTT
+$("connectBtn").addEventListener("click", () => {
+
+    const protocol = $("protocol").value;
+    const broker = $("broker").value.trim();
+    const port = parseInt($("port").value);
+    const path = $("path").value.trim();
+
+    if (!broker || !port || !path) {
+        alert("Please complete Broker Config!");
+        return;
+    }
+
+    if (client) {
+        try {
+            client.disconnect();
+        } catch (e) {}
+    }
+
+    connected = false;
+
+    const clientID = "web_" +
+        Math.random().toString(16).substring(2, 10);
+
+    client = new Paho.MQTT.Client(
+        broker,
+        port,
+        path,
+        clientID
+    );
+
+    setStatus("Connecting...", "normal");
+
+    client.onConnectionLost = function(response) {
+
+        connected = false;
+
+        setStatus("Connection Lost", "danger");
+
+        log("Connection Lost");
+
+    };
+
+    client.onMessageArrived = function(message) {
+
+        log(
+            "Topic: " +
+            message.destinationName +
+            " | " +
+            message.payloadString
+        );
+
+    };
+
+    client.connect({
+
+        useSSL: protocol === "wss",
+
+        timeout: 10,
+
+        onSuccess: function() {
+
+            connected = true;
+
+            setStatus("Connected to " + broker, "success");
+
+            log("Connected to MQTT Broker");
+
+            $("configPanel").style.display = "none";
+
+        },
+
+        onFailure: function(error) {
+
+            connected = false;
+
+            setStatus("Connection Failed", "danger");
+
+            log("Failed: " + error.errorMessage);
+
+        }
+
+    });
+
 });
 
-$("subscribeBtn").addEventListener("click",()=>{
-  if(!connected) return alert("Not connected");
-  const topic = $("subtopic").value;
-  client.subscribe(topic);
-  log("Subscribed: "+topic);
+// SUBSCRIBE MQTT
+$("subscribeBtn").addEventListener("click", () => {
+
+    if (!connected) {
+        alert("Please connect to MQTT Broker first!");
+        return;
+    }
+
+    const topic = $("subtopic").value.trim();
+
+    if (!topic) {
+        alert("Please enter Subscribe Topic!");
+        return;
+    }
+
+    client.subscribe(topic, {
+
+        onSuccess: function() {
+            log("Subscribed: " + topic);
+        },
+
+        onFailure: function() {
+            log("Subscribe Failed: " + topic);
+        }
+
+    });
+
 });
 
-$("publishBtn").addEventListener("click",()=>{
-  if(!connected) return alert("Not connected");
-  const topic = $("pubtopic").value;
-  const msg = $("message").value;
-  const message = new Paho.MQTT.Message(msg);
-  message.destinationName = topic;
-  client.send(message);
-  log("Sent: "+msg);
+// PUBLISH MQTT
+$("publishBtn").addEventListener("click", () => {
+
+    if (!connected) {
+        alert("Please connect to MQTT Broker first!");
+        return;
+    }
+
+    const topic = $("pubtopic").value.trim();
+    const msg = $("message").value;
+
+    if (!topic || !msg) {
+        alert("Please enter Topic and Message!");
+        return;
+    }
+
+    const message = new Paho.MQTT.Message(msg);
+
+    message.destinationName = topic;
+
+    try {
+
+        client.send(message);
+
+        log("Published: " + topic + " | " + msg);
+
+        $("message").value = "";
+
+    } catch (error) {
+
+        log("Publish Failed: " + error.message);
+
+    }
+
 });
+
 </script>
 
 </body>
